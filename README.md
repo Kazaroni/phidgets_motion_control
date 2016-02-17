@@ -1,1 +1,1 @@
-# ros_phidgets_jade
+# phidgets_motion_control
