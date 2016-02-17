@@ -37,7 +37,7 @@
 #include <ros/ros.h>
 #include <tf/transform_broadcaster.h>
 #include <nav_msgs/Odometry.h>
-#include "ros_phidgets_jade/encoder_params.h"
+#include "phidgets_motion_control/encoder_params.h"
 
 // used to prevent callbacks from accessing variables
 // before they are initialised
@@ -193,7 +193,7 @@ bool subscribe_to_encoders_by_index()
     // get the topic name
     std::string encoder_topic = encoder_topic_base;
     if (serial_number > -1) {
-        char serial_number_str[10];            
+        char serial_number_str[10];
         sprintf(serial_number_str,"%d", serial_number);
         encoder_topic += "/";
         encoder_topic += serial_number_str;
@@ -241,7 +241,7 @@ bool subscribe_to_encoders()
 		// get the topic name
 		std::string encoder_topic = encoder_topic_base;
 		if (serial_number > -1) {
-			char serial_number_str[10];            
+			char serial_number_str[10];
 			sprintf(serial_number_str,"%d", serial_number);
 			encoder_topic += "/";
 			encoder_topic += serial_number_str;
@@ -435,48 +435,48 @@ int main(int argc, char** argv)
 
                 current_time = ros::Time::now();
                 double dt = (current_time - last_time).toSec();
- 
+
                 // update the velocity estimate based upon
 				// encoder values
                 update_velocities(dt);
 
                 // compute odometry in a typical way given
-				// the velocities of the robot       
+				// the velocities of the robot
                 x += vx;
                 y += vy;
                 theta += vtheta;
-   
+
                 // since all odometry is 6DOF we'll need a
 				// quaternion created from yaw
                 geometry_msgs::Quaternion odom_quat =
 					tf::createQuaternionMsgFromYaw(theta);
-  
+
                 // first, we'll publish the transform over tf
                 geometry_msgs::TransformStamped odom_trans;
                 odom_trans.header.stamp = current_time;
                 odom_trans.header.frame_id = frame_id;
                 odom_trans.child_frame_id = base_link;
-  
+
                 odom_trans.transform.translation.x = x;
                 odom_trans.transform.translation.y = y;
                 odom_trans.transform.translation.z = 0.0;
                 odom_trans.transform.rotation = odom_quat;
-   
+
                 // send the transform
                 odom_broadcaster.sendTransform(odom_trans);
-  
+
                 // next, we'll publish the odometry
 				//  message over ROS
                 nav_msgs::Odometry odom;
                 odom.header.stamp = current_time;
                 odom.header.frame_id = frame_id;
-  
+
                 // set the position
                 odom.pose.pose.position.x = x;
                 odom.pose.pose.position.y = y;
                 odom.pose.pose.position.z = 0.0;
                 odom.pose.pose.orientation = odom_quat;
-  
+
                 // set the velocity
                 odom.child_frame_id = base_link;
                 odom.twist.twist.linear.x = vx/dt;
@@ -493,4 +493,3 @@ int main(int argc, char** argv)
         }
     }
 }
-

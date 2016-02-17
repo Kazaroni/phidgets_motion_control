@@ -37,7 +37,7 @@
 #include <geometry_msgs/Twist.h>
 #include <nav_msgs/Odometry.h>
 #include <phidgets_api/phidget.h>
-#include "ros_phidgets_jade/motor_params.h"
+#include "phidgets_motion_control/motor_params.h"
 
 // handle
 CPhidgetMotorControlHandle phid;
@@ -572,7 +572,7 @@ int main(int argc, char* argv[])
     if (attach(phid, serial_number)) {
 		display_properties(phid);
 
-        const int buffer_length = 100;        
+        const int buffer_length = 100;
         std::string topic_name = topic_path + name;
         std::string service_name = name;
         if (serial_number > -1) {
@@ -610,9 +610,9 @@ int main(int argc, char* argv[])
 				 last_velocity_command).toSec();
             if ((motors_active) &&
 				(time_since_last_command_sec > timeout_sec)) {
-                stop_motors();        
+                stop_motors();
                 ROS_WARN("No velocity command received - " \
-						 "motors stopped");        
+						 "motors stopped");
             }
         }
 
@@ -620,4 +620,3 @@ int main(int argc, char* argv[])
     }
     return 0;
 }
-

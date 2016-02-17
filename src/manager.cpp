@@ -36,7 +36,7 @@
 #include <sstream>
 #include <std_msgs/String.h>
 #include <phidgets_api/phidget.h>
-#include "ros_phidgets_jade/manager_params.h"
+#include "phidgets_motion_control/manager_params.h"
 
 // Handle
 CPhidgetManagerHandle phid;
@@ -169,7 +169,7 @@ int main(int argc, char* argv[])
 
     if (attach(phid)) {
 
-        const int buffer_length = 100;        
+        const int buffer_length = 100;
         std::string topic_name = "phidgets/manager";
         manager_pub =
 			n.advertise<ros_phidgets_jade::manager_params>(topic_name,
@@ -193,4 +193,3 @@ int main(int argc, char* argv[])
     }
     return 0;
 }
-

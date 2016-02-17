@@ -33,7 +33,7 @@
 #include <stdio.h>
 #include <ros/ros.h>
 #include <geometry_msgs/Twist.h>
-#include "ros_phidgets_jade/motor_params.h"
+#include "phidgets_motion_control/motor_params.h"
 
 ros::Publisher motor_pub;
 
@@ -61,7 +61,7 @@ void motorCallback(const phidgets_port::motor_params::ConstPtr& ptr)
 					 m.index, m.value);
             break;
         }
-		}    
+		}
 }
 
 /*!
@@ -104,4 +104,3 @@ int main(int argc, char** argv)
 
     return 0;
 }
-

@@ -36,7 +36,7 @@
 #include <sstream>
 #include <std_msgs/String.h>
 #include <phidgets_api/phidget.h>
-#include "ros_phidgets_jade/encoder_params.h"
+#include "phidgets_motion_control/encoder_params.h"
 
 // Handle
 CPhidgetEncoderHandle phid;
