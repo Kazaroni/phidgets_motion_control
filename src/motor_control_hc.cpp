@@ -116,7 +116,7 @@ int ErrorHandler(CPhidgetHandle phid, void *userptr,
 int InputChangeHandler(CPhidgetMotorControlHandle MC,
 					   void *usrptr, int Index, int State)
 {
-    ros_phidgets_jade::motor_params m;
+    phidgets_motion_control::motor_params m;
     m.index = Index;
     m.value_type = 1;
     m.value = (float)State;
@@ -128,7 +128,7 @@ int InputChangeHandler(CPhidgetMotorControlHandle MC,
 int VelocityChangeHandler(CPhidgetMotorControlHandle MC,
 						  void *usrptr, int Index, double Value)
 {
-    ros_phidgets_jade::motor_params m;
+    phidgets_motion_control::motor_params m;
     m.index = Index;
     m.value_type = 2;
     m.value = (float)Value;
@@ -140,7 +140,7 @@ int VelocityChangeHandler(CPhidgetMotorControlHandle MC,
 int CurrentChangeHandler(CPhidgetMotorControlHandle MC,
 						 void *usrptr, int Index, double Value)
 {
-    ros_phidgets_jade::motor_params m;
+    phidgets_motion_control::motor_params m;
     m.index = Index;
     m.value_type = 3;
     m.value = (float)Value;
@@ -584,7 +584,7 @@ int main(int argc, char* argv[])
             service_name += ser;
         }
         motors_pub =
-			n.advertise<ros_phidgets_jade::motor_params>(topic_name,
+			n.advertise<phidgets_motion_control::motor_params>(topic_name,
 												buffer_length);
 
         // receive velocity commands

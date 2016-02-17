@@ -58,7 +58,7 @@ int AttachHandler(CPhidgetHandle phid, void *userptr)
     CPhidget_getDeviceClass(phid, &cls);
     CPhidget_getDeviceID(phid, &id);
 
-    ros_phidgets_jade::manager_params m;
+    phidgets_motion_control::manager_params m;
     m.attached = true;
     m.name.data = name;
     m.serial = serialNo;
@@ -80,7 +80,7 @@ int DetachHandler(CPhidgetHandle phid, void *userptr)
     CPhidget_getDeviceName (phid, &name);
     CPhidget_getSerialNumber(phid, &serialNo);
 
-    ros_phidgets_jade::manager_params m;
+    phidgets_motion_control::manager_params m;
     m.attached = false;
     m.name.data = name;
     m.serial = serialNo;
@@ -172,7 +172,7 @@ int main(int argc, char* argv[])
         const int buffer_length = 100;
         std::string topic_name = "phidgets/manager";
         manager_pub =
-			n.advertise<ros_phidgets_jade::manager_params>(topic_name,
+			n.advertise<phidgets_motion_control::manager_params>(topic_name,
 												  buffer_length);
         ros::Rate loop_rate(frequency);
 

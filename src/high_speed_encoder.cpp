@@ -105,7 +105,7 @@ int PositionChangeHandler(CPhidgetEncoderHandle ENC,
     int Position;
     CPhidgetEncoder_getPosition(ENC, Index, &Position);
 
-    ros_phidgets_jade::encoder_params e;
+    phidgets_motion_control::encoder_params e;
     e.index = Index;
     e.count = Position;
     e.count_change = RelativePosition;
@@ -215,7 +215,7 @@ int main(int argc, char* argv[])
             topic_name += ser;
         }
         encoder_pub =
-			n.advertise<ros_phidgets_jade::encoder_params>(topic_name,
+			n.advertise<phidgets_motion_control::encoder_params>(topic_name,
 												  buffer_length);
         ros::Rate loop_rate(frequency);
 

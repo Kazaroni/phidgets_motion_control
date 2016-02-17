@@ -132,10 +132,10 @@ void update_encoder_right(int count)
  * \brief callback when the left or right encoder count changes
  * \param ptr encoder parameters
  */
-void encoderCallback(const ros_phidgets_jade::encoder_params::ConstPtr& ptr)
+void encoderCallback(const phidgets_motion_control::encoder_params::ConstPtr& ptr)
 {
     if (initialised) {
-        ros_phidgets_jade::encoder_params e = *ptr;
+        phidgets_motion_control::encoder_params e = *ptr;
         if (e.index == encoder_index_left) {
             update_encoder_left(e.count);
         }
@@ -149,10 +149,10 @@ void encoderCallback(const ros_phidgets_jade::encoder_params::ConstPtr& ptr)
  * \brief callback when the left encoder count changes
  * \param ptr encoder parameters
  */
-void leftEncoderCallback(const ros_phidgets_jade::encoder_params::ConstPtr& ptr)
+void leftEncoderCallback(const phidgets_motion_control::encoder_params::ConstPtr& ptr)
 {
     if (initialised) {
-        ros_phidgets_jade::encoder_params e = *ptr;
+        phidgets_motion_control::encoder_params e = *ptr;
         update_encoder_left(e.count);
     }
 }
@@ -161,10 +161,10 @@ void leftEncoderCallback(const ros_phidgets_jade::encoder_params::ConstPtr& ptr)
  * \brief callback when the right encoder count changes
  * \param ptr encoder parameters
  */
-void rightEncoderCallback(const ros_phidgets_jade::encoder_params::ConstPtr& ptr)
+void rightEncoderCallback(const phidgets_motion_control::encoder_params::ConstPtr& ptr)
 {
     if (initialised) {
-        ros_phidgets_jade::encoder_params e = *ptr;
+        phidgets_motion_control::encoder_params e = *ptr;
         update_encoder_right(e.count);
     }
 }
