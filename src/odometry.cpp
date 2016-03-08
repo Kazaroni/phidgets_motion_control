@@ -123,6 +123,7 @@ void update_encoder_right(int count)
  * \brief callback when the left or right encoder count changes
  * \param ptr encoder parameters
  */
+/* TODO we might not need the below callback
 void encoderCallback(const phidgets_motion_control::encoder_params::ConstPtr& ptr)
 {
 	if (initialised) {
@@ -135,7 +136,7 @@ void encoderCallback(const phidgets_motion_control::encoder_params::ConstPtr& pt
 		}
 	}
 }
-
+*/
 /*!
  * \brief callback when the left encoder count changes
  * \param ptr encoder parameters
@@ -260,6 +261,49 @@ bool subscribe_to_encoders()
 }
 
 
+//TODO the primatives in this function are overkill
+void update_velocities(double delta_seconds) {
+
+
+	//const double distance_per_((WHEEL DIAM) * math.PI)/3200(TODO overall ticks per rev);		
+	//TODO parameterize the below coefficent
+	double friction_coefficient = .1;
+
+	previous_encoder_count_left;
+	previous_encoder_count_right;
+
+	current_encoder_count_left;
+	current_encoder_count_right;
+
+	
+	double left_encoder_counts_per_m = (left_encoder_counts_per_mm * 1000);
+	double right_encoder_counts_per_m = right_encoder_counts_per_mm * 1000);
+
+	double wheelbase_m = (wheelbase_mm * 1000);
+
+	double delta_ticks_left = current_encouder_count_left - previous_encoder_count_left;
+	double delta_ticks_right = current_encouder_count_right - previous_encoder_count_right;
+	
+	double distance_left = delta_ticks_left * left_encoder_counts_per_m;
+	double distance_right = delta_ticks_right * right_encoder_counts_per_m;
+
+	double pivot_angle = (distance_left - distance_right)/wheelbase_m;
+
+	double distance_left_with_friction = distance_left + distance_left * pivot_angle * friction_coefficient;
+	double distance_right_with_friction = distance_right - distance_right * pivot_angle * friction_coefficient;
+	
+	double angle_with_friction = (distance_left_with_friction - distance_right_with_friction) / wheelbase_m ;
+
+	double pivot_radius = (wheelbase_m / 2) * ((distance_left_with_friction + distance_right_with_friction) / (distance_left_with_friction - distance_right_with_friction));
+
+	double distance_traveled_x = pivot_radius * cos(pivot_angle);
+	double distance_traveled_y = pivot_radius * sin(pivot_angle);
+
+	double distance_difference_travled_x = distance_traveled_x * dt;
+	double distance_difference_travled_y = distance_traveled_y * dt;
+
+}
+
 int main(int argc, char** argv)
 {
 
@@ -351,7 +395,7 @@ int main(int argc, char** argv)
 
 			// update the velocity estimate based upon
 			// TODO encoder values
-			//update_velocities(dt);
+			update_velocities(dt);
 
 			// compute odometry in a typical way given
 			// the velocities of the robot
@@ -398,7 +442,7 @@ int main(int argc, char** argv)
 			odom_pub.publish(odom);
 
 			last_time = current_time;
-
+			ros.spinOnce();
 			update_rate.sleep();
 		}
 
