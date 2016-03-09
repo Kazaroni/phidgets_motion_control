@@ -123,7 +123,7 @@ void update_encoder_right(int count)
  * \brief callback when the left or right encoder count changes
  * \param ptr encoder parameters
  */
-/* TODO we might not need the below callback
+
 void encoderCallback(const phidgets_motion_control::encoder_params::ConstPtr& ptr)
 {
 	if (initialised) {
@@ -136,7 +136,7 @@ void encoderCallback(const phidgets_motion_control::encoder_params::ConstPtr& pt
 		}
 	}
 }
-*/
+
 /*!
  * \brief callback when the left encoder count changes
  * \param ptr encoder parameters
@@ -166,100 +166,28 @@ void rightEncoderCallback(const phidgets_motion_control::encoder_params::ConstPt
  *        device which contains two or more encoders
  */
 
-/* TODO we might not need the below function, leaving for reference for now
-   bool subscribe_to_encoders_by_index()
+bool subscribe_to_encoders_by_index()
    {
-   bool success = true;
-   ros::NodeHandle n;
-   ros::NodeHandle nh("~");
-   std::string topic_path = "phidgets/";
-   nh.getParam("topic_path", topic_path);
-   std::string encodername = "encoder";
-   nh.getParam("encodername", encodername);
-   std::string encoder_topic_base = topic_path + encodername;
-   nh.getParam("encoder_topic", encoder_topic_base);
-   int serial_number = -1;
-   nh.getParam("serial", serial_number);
-   if (serial_number==-1) {
-   nh.getParam("serial_number", serial_number);
-   }
-
-// get the topic name
-std::string encoder_topic = encoder_topic_base;
-if (serial_number > -1) {
-char serial_number_str[10];
-sprintf(serial_number_str,"%d", serial_number);
-encoder_topic += "/";
-encoder_topic += serial_number_str;
-}
-
-encoders_sub =
-n.subscribe(encoder_topic, 1, encoderCallback);
-
-return(success);
-}
- */
-
-/*!
- * \param connects to the two phidgets high
- *        speed encoder devices
- */
-bool subscribe_to_encoders()
-{
-	bool success = true;
-	ros::NodeHandle n;
+   	bool success = true;
+   	ros::NodeHandle n;
 	ros::NodeHandle nh("~");
 	std::string topic_path = "phidgets/";
 	nh.getParam("topic_path", topic_path);
 	std::string encodername = "encoder";
 	nh.getParam("encodername", encodername);
-	std::string encoder_topic_base = topic_path + encodername;
+  	std::string encoder_topic_base = topic_path + encodername;
 	nh.getParam("encoder_topic", encoder_topic_base);
-	for (int enc = 0; enc < 2; enc++) {
 
-		// get encoder phidget serial number
-		std::string encoder_param_name = "serialleft";
-		if (enc > 0) {
-			encoder_param_name = "serialright";
-		}
-		int serial_number = -1;
-		//TODO remove below line and parameterize or remove need of serial all together
-		serial_number = 342515;
-		nh.getParam(encoder_param_name, serial_number);
-		if (serial_number == -1) {
-			success = false;
-			ROS_WARN("You must specify serial numbers " \
-					"for the encoder Phidget devices");
-			break;
-		}
+	encoders_sub = n.subscribe(encoder_topic_base, 300, encoderCallback);
 
-		// get the topic name
-		std::string encoder_topic = encoder_topic_base;
-		if (serial_number > -1) {
-			char serial_number_str[10];
-			sprintf(serial_number_str,"%d", serial_number);
-			encoder_topic += "/";
-			encoder_topic += serial_number_str;
-		}
-
-		// subscribe to the topic
-		if (enc == 0) {
-			ROS_INFO("Left encoder: %s", encoder_topic.c_str());
-			left_encoder_sub =
-				n.subscribe(encoder_topic, 1,
-						leftEncoderCallback);
-		}
-		else {
-			ROS_INFO("Right encoder: %s",
-					encoder_topic.c_str());
-			right_encoder_sub =
-				n.subscribe(encoder_topic, 1,
-						rightEncoderCallback);
-		}
-	}
 	return(success);
 }
 
+
+
+double distance_difference_traveled_x = 0;
+double distance_difference_traveled_y = 0;
+double pivot_radius = 0;
 
 //TODO the primatives in this function are overkill
 void update_velocities(double delta_seconds) {
@@ -277,13 +205,18 @@ void update_velocities(double delta_seconds) {
 
 	
 	double left_encoder_counts_per_m = (left_encoder_counts_per_mm * 1000);
-	double right_encoder_counts_per_m = right_encoder_counts_per_mm * 1000);
+	double right_encoder_counts_per_m = (right_encoder_counts_per_mm * 1000);
 
 	double wheelbase_m = (wheelbase_mm * 1000);
 
-	double delta_ticks_left = current_encouder_count_left - previous_encoder_count_left;
-	double delta_ticks_right = current_encouder_count_right - previous_encoder_count_right;
+	double delta_ticks_left = current_encoder_count_left - previous_encoder_count_left;
+	double delta_ticks_right = current_encoder_count_right - previous_encoder_count_right;
 	
+	//TODO remove this debug
+	
+		ROS_DEBUG("delta ticks l/r: %d / %d", delta_ticks_left, delta_ticks_right);
+	
+
 	double distance_left = delta_ticks_left * left_encoder_counts_per_m;
 	double distance_right = delta_ticks_right * right_encoder_counts_per_m;
 
@@ -294,13 +227,20 @@ void update_velocities(double delta_seconds) {
 	
 	double angle_with_friction = (distance_left_with_friction - distance_right_with_friction) / wheelbase_m ;
 
-	double pivot_radius = (wheelbase_m / 2) * ((distance_left_with_friction + distance_right_with_friction) / (distance_left_with_friction - distance_right_with_friction));
+	double distance_traveled_x;
+	double distance_traveled_y;
 
-	double distance_traveled_x = pivot_radius * cos(pivot_angle);
-	double distance_traveled_y = pivot_radius * sin(pivot_angle);
+	if (distance_left_with_friction - distance_right_with_friction == 0) {
+		distance_traveled_x = distance_left_with_friction;
+		distance_traveled_y = 0;
+	} else {
+		double pivot_radius = (wheelbase_m / 2) * ((distance_left_with_friction + distance_right_with_friction) / (distance_left_with_friction - distance_right_with_friction));
+		distance_traveled_x = pivot_radius * cos(pivot_angle);
+		distance_traveled_y = pivot_radius * sin(pivot_angle);
+	}
 
-	double distance_difference_travled_x = distance_traveled_x * dt;
-	double distance_difference_travled_y = distance_traveled_y * dt;
+	distance_difference_traveled_x = distance_traveled_x * delta_seconds;
+	distance_difference_traveled_y = distance_traveled_y * delta_seconds;
 
 }
 
@@ -336,7 +276,7 @@ int main(int argc, char** argv)
 
 
 	// connect to the encoders
-	if (subscribe_to_encoders()) {
+	if (subscribe_to_encoders_by_index()) {
 
 		// Setup nav and odom stuff
 		std::string base_link = "base_link";
@@ -353,7 +293,7 @@ int main(int argc, char** argv)
 		// Get verbosity level
 		nh.getParam("verbose", verbose);
 
-		int frequency = 100;
+		int frequency = 20;
 		nh.getParam("frequency", frequency);
 
 		geometry_msgs::TransformStamped odom_trans;
@@ -369,13 +309,15 @@ int main(int argc, char** argv)
 		ros::Rate update_rate(frequency);
 		while(ros::ok()){
 
+
+			
 			// Handle and update time
 			current_time = ros::Time::now();
 			//TODO remove test section below
 			double dt = (current_time - last_time).toSec();
-			double delta_x = ( 0.4 * cos(theta) - 0.0 * sin(theta) ) * dt;
-			double delta_y = ( .4 * sin(theta) + 0.0 * cos(theta) ) * dt;
-			double delta_th = 0.4 * dt;
+			//double delta_x = ( 0.4 * cos(theta) - 0.0 * sin(theta) ) * dt;
+			//double delta_y = ( .4 * sin(theta) + 0.0 * cos(theta) ) * dt;
+			//double delta_th = 0.4 * dt;
 
 			// reset the pose
 			bool reset = false;
@@ -399,9 +341,9 @@ int main(int argc, char** argv)
 
 			// compute odometry in a typical way given
 			// the velocities of the robot
-			x += delta_x;
-			y += delta_y;
-			theta += delta_theta;
+			x += distance_difference_traveled_x;
+			y += distance_difference_traveled_y;
+			theta += pivot_radius;
 
 			// get Quaternion from rpy
 			geometry_msgs::Quaternion odom_quat =
@@ -431,18 +373,18 @@ int main(int argc, char** argv)
 
 			// set the velocity
 			odom.child_frame_id = base_link;
-			odom.twist.twist.linear.x = delta_x;
-			odom.twist.twist.linear.y = delta_y;
+			odom.twist.twist.linear.x = distance_difference_traveled_x / dt;
+			odom.twist.twist.linear.y = distance_difference_traveled_y / dt;
 			odom.twist.twist.linear.z = 0.0;
 			odom.twist.twist.angular.x = 0.0;	
 			odom.twist.twist.angular.y = 0.0;
-			odom.twist.twist.angular.z = delta_theta;
+			odom.twist.twist.angular.z = pivot_radius / dt;
 
 			// publish odom
 			odom_pub.publish(odom);
 
 			last_time = current_time;
-			ros.spinOnce();
+			ros::spinOnce();
 			update_rate.sleep();
 		}
 
