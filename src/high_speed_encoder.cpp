@@ -190,6 +190,7 @@ int main(int argc, char* argv[])
     ros::init(argc, argv, "phidgets_high_speed_encoder");
     ros::NodeHandle n;
     ros::NodeHandle nh("~");
+
     int serial_number = -1;
     nh.getParam("serial", serial_number);
     std::string name = "encoder";
@@ -217,14 +218,9 @@ int main(int argc, char* argv[])
         encoder_pub =
 			n.advertise<phidgets_motion_control::encoder_params>(topic_name,
 												  buffer_length);
-        ros::Rate loop_rate(frequency);
-
         initialised = true;
 
-        while (ros::ok()) {
-            ros::spinOnce();
-            loop_rate.sleep();
-        }
+        ros::spin();
 
         disconnect(phid);
     }

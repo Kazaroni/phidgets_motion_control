@@ -52,6 +52,8 @@ bool invert_rotation = false;
 bool invert_forward = false;
 double rotation_offset = 0;
 
+double timeout_sec = 2;
+
 nav_msgs::Odometry odom;
 double current_linear_velocity = 0;
 double current_angular_velocity = 0;
@@ -496,6 +498,14 @@ void stop_motors()
     motors_active = false;
 }
 
+void engineStopTimeoutTimerCallback( const ros::TimerEvent& e  ) {
+
+	if( ((ros::Time::now() - last_velocity_command).toSec()) > timeout_sec ) {
+                stop_motors();
+                ROS_WARN("No velocity command received in %G seconds", timeout_sec );
+	}
+}
+
 int main(int argc, char* argv[])
 {
     ros::init(argc, argv, "phidgets_motor_control_hc");
@@ -558,7 +568,6 @@ int main(int argc, char* argv[])
 
     std::string topic_path = "phidgets/";
     nh.getParam("topic_path", topic_path);
-    int timeout_sec = 2;
     nh.getParam("timeout", timeout_sec);
     int v=0;
     nh.getParam("speed", v);
@@ -596,25 +605,10 @@ int main(int argc, char* argv[])
 			n.subscribe(odometry_topic, 1, odometryCallback);
 
         initialised = true;
-        ros::Rate loop_rate(frequency);
+	ros::Timer engineStopTimeoutTimer = n.createTimer( ros::Duration(1.0), engineStopTimeoutTimerCallback );
 
-        while (ros::ok()) {
-            ros::spinOnce();
-            loop_rate.sleep();
 
-            // SAFETY FEATURE
-            // if a velocity command has not been received
-			// for a period of time then stop the motors
-            double time_since_last_command_sec =
-				(ros::Time::now() -
-				 last_velocity_command).toSec();
-            if ((motors_active) &&
-				(time_since_last_command_sec > timeout_sec)) {
-                stop_motors();
-                ROS_WARN("No velocity command received - " \
-						 "motors stopped");
-            }
-        }
+	ros::spin();
 
         disconnect(phid);
     }

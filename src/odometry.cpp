@@ -49,7 +49,7 @@ int encoder_index_left=-1;
 int encoder_index_right=-1;
 
 // should we announce every encoder count that arrives?
-bool verbose = false;
+bool verbose = true;
 
 // normally on a differential drive system to when moving
 //  forwards the wheels are rotating in opposite directions
@@ -126,12 +126,12 @@ void update_encoder_right(int count)
 
 void encoderCallback(const phidgets_motion_control::encoder_params::ConstPtr& ptr)
 {
+
 	if (initialised) {
 		phidgets_motion_control::encoder_params e = *ptr;
 		if (e.index == encoder_index_left) {
 			update_encoder_left(e.count);
-		}
-		if (e.index == encoder_index_right) {
+		} else if (e.index == encoder_index_right) {
 			update_encoder_right(e.count);
 		}
 	}
@@ -191,30 +191,25 @@ double pivot_radius = 0;
 
 //TODO the primatives in this function are overkill
 void update_velocities(double delta_seconds) {
-
+	ROS_DEBUG("curr_encoder_count_left %i, right %i", current_encoder_count_left, current_encoder_count_right);
 
 	//const double distance_per_((WHEEL DIAM) * math.PI)/3200(TODO overall ticks per rev);		
 	//TODO parameterize the below coefficent
 	double friction_coefficient = .1;
 
-	previous_encoder_count_left;
-	previous_encoder_count_right;
-
-	current_encoder_count_left;
-	current_encoder_count_right;
-
-	
 	double left_encoder_counts_per_m = (left_encoder_counts_per_mm * 1000);
 	double right_encoder_counts_per_m = (right_encoder_counts_per_mm * 1000);
 
 	double wheelbase_m = (wheelbase_mm * 1000);
-
+	//TODO subtract start ticks
 	double delta_ticks_left = current_encoder_count_left - previous_encoder_count_left;
 	double delta_ticks_right = current_encoder_count_right - previous_encoder_count_right;
 	
 	//TODO remove this debug
 	
-		ROS_DEBUG("delta ticks l/r: %d / %d", delta_ticks_left, delta_ticks_right);
+
+
+	ROS_DEBUG("delta ticks l/r: %i / %i", delta_ticks_left, delta_ticks_right);
 	
 
 	double distance_left = delta_ticks_left * left_encoder_counts_per_m;
@@ -241,6 +236,9 @@ void update_velocities(double delta_seconds) {
 
 	distance_difference_traveled_x = distance_traveled_x * delta_seconds;
 	distance_difference_traveled_y = distance_traveled_y * delta_seconds;
+
+	//previous_encoder_count_left = current_encoder_count_left;
+	//previous_encoder_count_right = current_encoder_count_right;
 
 }
 
@@ -276,122 +274,124 @@ int main(int argc, char** argv)
 
 
 	// connect to the encoders
-	if (subscribe_to_encoders_by_index()) {
+	std::string topic_path = "phidgets/";
+	nh.getParam("topic_path", topic_path);
+	std::string encodername = "encoder";
+	nh.getParam("encodername", encodername);
+  	std::string encoder_topic_base = topic_path + encodername;
+	nh.getParam("encoder_topic", encoder_topic_base);
 
-		// Setup nav and odom stuff
-		std::string base_link = "base_link";
-		nh.getParam("base_link", base_link);
-		std::string frame_id = "odom";
-		nh.getParam("frame_id", frame_id);
-		nh.getParam("countspermmleft",
-				left_encoder_counts_per_mm);
-		nh.getParam("countspermmright",
-				right_encoder_counts_per_mm);
+	encoders_sub = n.subscribe(encoder_topic_base, 300, encoderCallback);
 
-		nh.getParam("wheelbase", wheelbase_mm);
 
-		// Get verbosity level
-		nh.getParam("verbose", verbose);
+	// Setup nav and odom stuff
+	std::string base_link = "base_link";
+	nh.getParam("base_link", base_link);
+	std::string frame_id = "odom";
+	nh.getParam("frame_id", frame_id);
+	nh.getParam("countspermmleft",
+			left_encoder_counts_per_mm);
+	nh.getParam("countspermmright",
+			right_encoder_counts_per_mm);
 
-		int frequency = 20;
-		nh.getParam("frequency", frequency);
+	nh.getParam("wheelbase", wheelbase_mm);
 
-		geometry_msgs::TransformStamped odom_trans;
-		odom_trans.header.frame_id = frame_id;
-		odom_trans.child_frame_id = base_link;
+	// Get verbosity level
+	nh.getParam("verbose", verbose);
 
-		ros::Time current_time, last_time;
+	int frequency = 20;
+	nh.getParam("frequency", frequency);
+
+	geometry_msgs::TransformStamped odom_trans;
+	odom_trans.header.frame_id = frame_id;
+	odom_trans.child_frame_id = base_link;
+
+	ros::Time current_time, last_time;
+	current_time = ros::Time::now();
+	last_time = ros::Time::now();
+
+	initialised = true;
+
+	ros::Rate update_rate(frequency);
+	while(ros::ok()){
+
+
+		
+		// Handle and update time
 		current_time = ros::Time::now();
-		last_time = ros::Time::now();
+		//TODO remove test section below
+		double dt = (current_time - last_time).toSec();
+		//double delta_x = ( 0.4 * cos(theta) - 0.0 * sin(theta) ) * dt;
+		//double delta_y = ( .4 * sin(theta) + 0.0 * cos(theta) ) * dt;
+		//double delta_th = 0.4 * dt;
 
-		initialised = true;
+		// reset the pose
+		bool reset = false;
+		n.getParam(reset_topic, reset);
 
-		ros::Rate update_rate(frequency);
-		while(ros::ok()){
-
-
-			
-			// Handle and update time
-			current_time = ros::Time::now();
-			//TODO remove test section below
-			double dt = (current_time - last_time).toSec();
-			//double delta_x = ( 0.4 * cos(theta) - 0.0 * sin(theta) ) * dt;
-			//double delta_y = ( .4 * sin(theta) + 0.0 * cos(theta) ) * dt;
-			//double delta_th = 0.4 * dt;
-
-			// reset the pose
-			bool reset = false;
-			n.getParam(reset_topic, reset);
-
-			if (reset) {
-				x = 0;
-				y = 0;
-				theta = 0;
-				delta_x = 0;
-				delta_y = 0;
-				delta_theta = 0;
-				n.setParam(reset_topic, false);
-				start_encoder_count_left = 0;
-				start_encoder_count_right = 0;
-			}
-
-			// update the velocity estimate based upon
-			// TODO encoder values
-			update_velocities(dt);
-
-			// compute odometry in a typical way given
-			// the velocities of the robot
-			x += distance_difference_traveled_x;
-			y += distance_difference_traveled_y;
-			theta += pivot_radius;
-
-			// get Quaternion from rpy
-			geometry_msgs::Quaternion odom_quat =
-				tf::createQuaternionMsgFromYaw(theta);
-
-			// first, we'll publish the transform over tf
-			odom_trans.header.stamp = current_time;
-
-			odom_trans.transform.translation.x = x;
-			odom_trans.transform.translation.y = y;
-			odom_trans.transform.translation.z = 0.0;
-			odom_trans.transform.rotation = odom_quat;
-
-			// send the transform
-			//odom_broadcaster.sendTransform(odom_trans);
-
-			// publish the odometry
-			nav_msgs::Odometry odom;
-			odom.header.stamp = current_time;
-			odom.header.frame_id = frame_id;
-
-			// set position
-			odom.pose.pose.position.x = x;
-			odom.pose.pose.position.y = y;
-			odom.pose.pose.position.z = 0.0;
-			odom.pose.pose.orientation = odom_quat;
-
-			// set the velocity
-			odom.child_frame_id = base_link;
-			odom.twist.twist.linear.x = distance_difference_traveled_x / dt;
-			odom.twist.twist.linear.y = distance_difference_traveled_y / dt;
-			odom.twist.twist.linear.z = 0.0;
-			odom.twist.twist.angular.x = 0.0;	
-			odom.twist.twist.angular.y = 0.0;
-			odom.twist.twist.angular.z = pivot_radius / dt;
-
-			// publish odom
-			odom_pub.publish(odom);
-
-			last_time = current_time;
-			ros::spinOnce();
-			update_rate.sleep();
+		if (reset) {
+			x = 0;
+			y = 0;
+			theta = 0;
+			delta_x = 0;
+			delta_y = 0;
+			delta_theta = 0;
+			n.setParam(reset_topic, false);
+			start_encoder_count_left = 0;
+			start_encoder_count_right = 0;
 		}
 
-		return 0;
-	} else { 
-		ROS_ERROR("Unable to subscribe to encoder topic" );
-		return 1;
+		// update the velocity estimate based upon
+		// TODO encoder values
+		update_velocities(dt);
+
+		// compute odometry in a typical way given
+		// the velocities of the robot
+		x += distance_difference_traveled_x;
+		y += distance_difference_traveled_y;
+		theta += pivot_radius;
+
+		// get Quaternion from rpy
+		geometry_msgs::Quaternion odom_quat =
+			tf::createQuaternionMsgFromYaw(theta);
+
+		// first, we'll publish the transform over tf
+		odom_trans.header.stamp = current_time;
+
+		odom_trans.transform.translation.x = x;
+		odom_trans.transform.translation.y = y;
+		odom_trans.transform.translation.z = 0.0;
+		odom_trans.transform.rotation = odom_quat;
+
+		// send the transform
+		//odom_broadcaster.sendTransform(odom_trans);
+
+		// publish the odometry
+		nav_msgs::Odometry odom;
+		odom.header.stamp = current_time;
+		odom.header.frame_id = frame_id;
+
+		// set position
+		odom.pose.pose.position.x = x;
+		odom.pose.pose.position.y = y;
+		odom.pose.pose.position.z = 0.0;
+		odom.pose.pose.orientation = odom_quat;
+
+		// set the velocity
+		odom.child_frame_id = base_link;
+		odom.twist.twist.linear.x = distance_difference_traveled_x / dt;
+		odom.twist.twist.linear.y = distance_difference_traveled_y / dt;
+		odom.twist.twist.linear.z = 0.0;
+		odom.twist.twist.angular.x = 0.0;	
+		odom.twist.twist.angular.y = 0.0;
+		odom.twist.twist.angular.z = pivot_radius / dt;
+
+		// publish odom
+		odom_pub.publish(odom);
+
+		last_time = current_time;
+		ros::spinOnce();
+		update_rate.sleep();
 	}
 	return 0;
 }
