@@ -79,12 +79,12 @@ int ErrorHandler(CPhidgetHandle phid, void *userptr, int ErrorCode, const char *
 }
 
 int display_properties(CPhidgetMotorControlHandle phid){
-	int serialNo, version, numEncoders, numInputs, numMotors, numSensors, ratiometric;
-	const char* ptr;
+  int serialNo, version, numEncoders, numInputs, numMotors, numSensors, ratiometric;
+  const char* ptr;
 
-	CPhidget_getDeviceType((CPhidgetHandle)phid, &ptr);
-	CPhidget_getSerialNumber((CPhidgetHandle)phid, &serialNo);
-	CPhidget_getDeviceVersion((CPhidgetHandle)phid, &version);
+  CPhidget_getDeviceType((CPhidgetHandle)phid, &ptr);
+  CPhidget_getSerialNumber((CPhidgetHandle)phid, &serialNo);
+  CPhidget_getDeviceVersion((CPhidgetHandle)phid, &version);
 
   CPhidgetMotorControl_getEncoderCount(phid, &numEncoders);
   CPhidgetMotorControl_getInputCount(phid, &numInputs);
@@ -92,13 +92,13 @@ int display_properties(CPhidgetMotorControlHandle phid){
   CPhidgetMotorControl_getSensorCount(phid, &numSensors);
   CPhidgetMotorControl_getRatiometric(phid, &ratiometric);
 
-	ROS_INFO("%s\n", ptr);
-	ROS_INFO("Serial Number: %10d\nVersion: %8d\n", serialNo, version);
+  ROS_INFO("%s\n", ptr);
+  ROS_INFO("Serial Number: %10d\nVersion: %8d\n", serialNo, version);
   ROS_INFO("# Encoders: %d\n", numEncoders);
   ROS_INFO("# Inputs: %d\n", numInputs);
   ROS_INFO("# Motors: %d\n", numMotors);
   ROS_INFO("# Sensors: %d\n", numSensors);
-	ROS_INFO("Ratiometric: %d\n", ratiometric);
+  ROS_INFO("Ratiometric: %d\n", ratiometric);
 
 	return 0;
 }

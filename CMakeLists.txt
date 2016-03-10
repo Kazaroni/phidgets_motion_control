@@ -140,7 +140,7 @@ add_dependencies(motor_control phidgets_api)
 target_link_libraries(motor_control ${catkin_LIBRARIES})
 
 add_executable(motor_feedback src/motor_feedback.cpp)
-#add_dependencies(motor_feedback ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(motor_feedback ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(motor_feedback phidgets_api)
 target_link_libraries(motor_feedback ${catkin_LIBRARIES})
 
