@@ -186,7 +186,7 @@ int main(int argc, char* argv[]) {
     display_properties(mcphid);
     initalized = true;
 
-    ros::Timer timer = nh.createTimer(ros::Duration(0.033), timerCallback);
+    ros::Timer timer = nh.createTimer(ros::Duration(0.5), timerCallback);
     ros::spin();
     disconnect(mcphid);
   }
