@@ -9,6 +9,7 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   roscpp
   std_msgs
+  sensor_msgs
   phidgets_api
   tf
 )
@@ -107,7 +108,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  LIBRARIES phidgets_port
-  CATKIN_DEPENDS nav_msgs roscpp std_msgs phidgets_api tf
+  CATKIN_DEPENDS message_runtime nav_msgs roscpp std_msgs sensor_msgs phidgets_api tf
   DEPENDS system_lib
 )
 
@@ -139,7 +140,7 @@ add_dependencies(motor_control phidgets_api)
 target_link_libraries(motor_control ${catkin_LIBRARIES})
 
 add_executable(motor_feedback src/motor_feedback.cpp)
-add_dependencies(motor_feedback ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+#add_dependencies(motor_feedback ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(motor_feedback phidgets_api)
 target_link_libraries(motor_feedback ${catkin_LIBRARIES})
 

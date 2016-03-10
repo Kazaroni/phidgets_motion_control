@@ -37,11 +37,13 @@
 #include <phidgets_api/phidget.h>
 #include <std_msgs/Float32.h>
 #include <std_msgs/Float32MultiArray.h>
+//#include <sensor_msgs/BatteryState.h>
 
 
 ros::Publisher supplyVoltagePub;
 ros::Publisher motorCurrentPub;
 ros::Publisher motorBackEMFPub;
+ros::Publisher batteryStatePub;
 
 CPhidgetMotorControlHandle mcphid = 0;
 bool initalized = false;
@@ -124,7 +126,7 @@ void disconnect(CPhidgetMotorControlHandle &phid){
     CPhidget_delete((CPhidgetHandle)phid);
 }
 
-void publishSupplyVoltage(CPhidgetMotorControlHandle &phid) {
+std_msgs::Float32 publishSupplyVoltage(CPhidgetMotorControlHandle &phid) {
   double supplyVoltage = 0;
   std_msgs::Float32 msg;
   CPhidgetMotorControl_getSupplyVoltage(phid, &supplyVoltage);
@@ -132,14 +134,28 @@ void publishSupplyVoltage(CPhidgetMotorControlHandle &phid) {
   msg.data = supplyVoltage;
 
   supplyVoltagePub.publish(msg);
+  return msg;
 }
 
 
 void timerCallback(const ros::TimerEvent& event) {
   if(!initalized){ return; }
 
-  if(supplyVoltagePub.getNumSubscribers() > 0){
-    publishSupplyVoltage(mcphid);
+
+
+  if(supplyVoltagePub.getNumSubscribers() > 0 /*|| batteryStatePub.getNumSubscribers() > 0*/){
+    std_msgs::Float32 voltsMsg = publishSupplyVoltage(mcphid);
+    /*sensor_msgs::BatteryState battMsg;
+
+    battMsg.header.stamp = ros::Time::now();
+    battMsg.voltage = voltsMsg.data;
+    battMsg.current = nanf();
+    battMsg.charge = nanf();
+    battMsg.capacity = nanf();
+    battMsg.design_capacity = nanf();
+    battMsg.percentage = nanf();
+
+    batteryStatePub.publish(battMsg);*/
   }
 
   /*if(motorCurrentPub.getNumSubscribers() > 0){
@@ -159,6 +175,7 @@ int main(int argc, char* argv[]) {
   supplyVoltagePub = n.advertise<std_msgs::Float32>("/cl4_motor_gpio/supply_voltage", 1, true);
   motorCurrentPub = n.advertise<std_msgs::Float32MultiArray>("/cl4_motor_gpio/motor_current", 1, true);
   motorBackEMFPub = n.advertise<std_msgs::Float32MultiArray>("/cl4_motor_gpio/motor_back_emf", 1, true);
+  //batteryStatePub = n.advertise<sensor_msgs::BatteryState>("/battery", 1, true);
 
   // Load parameters
   nh.getParam("serial", serialNumber);
