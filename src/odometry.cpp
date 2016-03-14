@@ -197,10 +197,10 @@ void update_velocities(double delta_seconds) {
 	//TODO parameterize the below coefficent
 	double friction_coefficient = .1;
 
-	double left_encoder_counts_per_m = (left_encoder_counts_per_mm * 1000);
-	double right_encoder_counts_per_m = (right_encoder_counts_per_mm * 1000);
+	double left_encoder_counts_per_m = (left_encoder_counts_per_mm / 1000);
+	double right_encoder_counts_per_m = (right_encoder_counts_per_mm / 1000);
 
-	double wheelbase_m = (wheelbase_mm * 1000);
+	double wheelbase_m = (wheelbase_mm / 1000);
 	//TODO subtract start ticks
 	double delta_ticks_left = current_encoder_count_left - previous_encoder_count_left;
 	double delta_ticks_right = current_encoder_count_right - previous_encoder_count_right;
@@ -225,20 +225,23 @@ void update_velocities(double delta_seconds) {
 	double distance_traveled_x;
 	double distance_traveled_y;
 
-	if (distance_left_with_friction - distance_right_with_friction == 0) {
+	if(distance_left_with_friction == 0 && distance_right_with_friction == 0 ) {
+		distance_traveled_x = 0;
+		distance_traveled_y = 0;
+	}else if (distance_left_with_friction - distance_right_with_friction == 0) {
 		distance_traveled_x = distance_left_with_friction;
 		distance_traveled_y = 0;
 	} else {
 		double pivot_radius = (wheelbase_m / 2) * ((distance_left_with_friction + distance_right_with_friction) / (distance_left_with_friction - distance_right_with_friction));
-		distance_traveled_x = pivot_radius * cos(pivot_angle);
-		distance_traveled_y = pivot_radius * sin(pivot_angle);
+		distance_traveled_x = (pivot_radius * cos(pivot_angle)) * sqrt(pow(distance_left_with_friction, 2) + pow(distance_right_with_friction, 2));
+		distance_traveled_y = (pivot_radius * sin(pivot_angle)) * sqrt(pow(distance_left_with_friction, 2) + pow(distance_right_with_friction, 2));
 	}
 
 	distance_difference_traveled_x = distance_traveled_x * delta_seconds;
 	distance_difference_traveled_y = distance_traveled_y * delta_seconds;
 
-	//previous_encoder_count_left = current_encoder_count_left;
-	//previous_encoder_count_right = current_encoder_count_right;
+	previous_encoder_count_left = current_encoder_count_left;
+	previous_encoder_count_right = current_encoder_count_right;
 
 }
 
@@ -364,7 +367,7 @@ int main(int argc, char** argv)
 		odom_trans.transform.rotation = odom_quat;
 
 		// send the transform
-		//odom_broadcaster.sendTransform(odom_trans);
+		odom_broadcaster.sendTransform(odom_trans);
 
 		// publish the odometry
 		nav_msgs::Odometry odom;
