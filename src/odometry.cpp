@@ -53,8 +53,8 @@ bool verbose = true;
 
 // normally on a differential drive system to when moving
 //  forwards the wheels are rotating in opposite directions
-int encoder_direction_left = -1;
-int encoder_direction_right = 1;
+int encoder_direction_left = 1;
+int encoder_direction_right = -1;
 
 // distance between the wheel centres
 double wheelbase_mm = 305;
@@ -221,8 +221,8 @@ void update_velocities(double dt) {
 
 	double pivot_center = ( ( wheel_base_m / 2 ) *  ( ( left_wheel_travel + right_wheel_travel ) / ( left_wheel_travel - right_wheel_travel ) ) ) * (1 + friction_coefficient);
 
-	double x_instantanous_center_of_curvature = x - ( pivot_center * sin(theta) );
-	double y_instantanous_center_of_curvature = y + ( pivot_center * cos(theta) );
+    double x_instantanous_center_of_curvature = x - ( pivot_center * cos(theta) );
+    double y_instantanous_center_of_curvature = y + ( pivot_center * sin(theta) );
 	
 	ROS_INFO("dt=%f, wd=%f, rwt=%f, lwt=%f, pecr=%d, pecl=%d, cecr=%d, cecl=%d, pa=%f, pc=%f, xicc=%f, yicc=%f", dt, wheel_diam_m, right_wheel_travel, left_wheel_travel, previous_encoder_count_right, previous_encoder_count_left, current_encoder_count_right, current_encoder_count_left, pivot_angl, pivot_center, x_instantanous_center_of_curvature, y_instantanous_center_of_curvature);
 
