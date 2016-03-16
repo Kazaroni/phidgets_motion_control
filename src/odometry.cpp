@@ -57,7 +57,17 @@ int encoder_direction_left = -1;
 int encoder_direction_right = 1;
 
 // distance between the wheel centres
-double wheelbase_mm = 400;
+double wheelbase_mm = 305;
+
+// how many ticks in a rev
+double ticks_per_rev = 3200;
+
+// wheel diameter
+double wheel_diam_mm = 392.64;
+
+// friction
+
+double friction_coefficient = .1;
 
 // encoder counts
 int current_encoder_count_left = 0;
@@ -65,14 +75,10 @@ int current_encoder_count_right = 0;
 int previous_encoder_count_left = 0;
 int previous_encoder_count_right = 0;
 
-// keep track if the initial encoder values so that relative
-// movement can be reported
-int start_encoder_count_left = 0;
-int start_encoder_count_right = 0;
 
 // encoder counts per millimetre
-double left_encoder_counts_per_mm = 0;
-double right_encoder_counts_per_mm = 0;
+double left_encoder_counts_per_mm = .1227;
+double right_encoder_counts_per_mm =.1227;
 
 ros::Subscriber left_encoder_sub;
 ros::Subscriber right_encoder_sub;
@@ -94,29 +100,12 @@ double rotation_offset=0;
 void update_encoder_left(int count)
 {
 	current_encoder_count_left = count * encoder_direction_left;
-	if (start_encoder_count_left == 0) {
-		start_encoder_count_left = current_encoder_count_left;
-	}
-	if (verbose) {
-		ROS_INFO("Left Encoder Count %d",
-				current_encoder_count_left -
-				start_encoder_count_left);
-	}
 }
 
 // Update the right encoder count
 void update_encoder_right(int count)
 {
-	current_encoder_count_right =
-		count * encoder_direction_right;
-	if (start_encoder_count_right == 0) {
-		start_encoder_count_right = current_encoder_count_right;
-	}
-	if (verbose) {
-		ROS_INFO("Right Encoder Count %d",
-				current_encoder_count_right -
-				start_encoder_count_right);
-	}
+	current_encoder_count_right = count * encoder_direction_right;
 }
 
 /*!
@@ -185,63 +174,100 @@ bool subscribe_to_encoders_by_index()
 
 
 
-double distance_difference_traveled_x = 0;
-double distance_difference_traveled_y = 0;
-double pivot_radius = 0;
+void update_velocities(double dt) {
 
-//TODO the primatives in this function are overkill
-void update_velocities(double delta_seconds) {
-	ROS_DEBUG("curr_encoder_count_left %i, right %i", current_encoder_count_left, current_encoder_count_right);
-
-	//const double distance_per_((WHEEL DIAM) * math.PI)/3200(TODO overall ticks per rev);		
-	//TODO parameterize the below coefficent
-	double friction_coefficient = .1;
-
-	double left_encoder_counts_per_m = (left_encoder_counts_per_mm / 1000);
-	double right_encoder_counts_per_m = (right_encoder_counts_per_mm / 1000);
-
-	double wheelbase_m = (wheelbase_mm / 1000);
-	//TODO subtract start ticks
-	double delta_ticks_left = current_encoder_count_left - previous_encoder_count_left;
-	double delta_ticks_right = current_encoder_count_right - previous_encoder_count_right;
+	if((current_encoder_count_left - previous_encoder_count_left) == 0 &&
+		(current_encoder_count_right - previous_encoder_count_right) == 0) { 	
 	
-	//TODO remove this debug
-	
-
-
-	ROS_DEBUG("delta ticks l/r: %i / %i", delta_ticks_left, delta_ticks_right);
-	
-
-	double distance_left = delta_ticks_left * left_encoder_counts_per_m;
-	double distance_right = delta_ticks_right * right_encoder_counts_per_m;
-
-	double pivot_angle = (distance_left - distance_right)/wheelbase_m;
-
-	double distance_left_with_friction = distance_left + distance_left * pivot_angle * friction_coefficient;
-	double distance_right_with_friction = distance_right - distance_right * pivot_angle * friction_coefficient;
-	
-	double angle_with_friction = (distance_left_with_friction - distance_right_with_friction) / wheelbase_m ;
-
-	double distance_traveled_x;
-	double distance_traveled_y;
-
-	if(distance_left_with_friction == 0 && distance_right_with_friction == 0 ) {
-		distance_traveled_x = 0;
-		distance_traveled_y = 0;
-	}else if (distance_left_with_friction - distance_right_with_friction == 0) {
-		distance_traveled_x = distance_left_with_friction;
-		distance_traveled_y = 0;
-	} else {
-		double pivot_radius = (wheelbase_m / 2) * ((distance_left_with_friction + distance_right_with_friction) / (distance_left_with_friction - distance_right_with_friction));
-		distance_traveled_x = (pivot_radius * cos(pivot_angle)) * sqrt(pow(distance_left_with_friction, 2) + pow(distance_right_with_friction, 2));
-		distance_traveled_y = (pivot_radius * sin(pivot_angle)) * sqrt(pow(distance_left_with_friction, 2) + pow(distance_right_with_friction, 2));
+		delta_x = 0;
+		delta_y = 0;
+        delta_theta = 0;
+		ROS_INFO("skip1");
+		return;
 	}
 
-	distance_difference_traveled_x = distance_traveled_x * delta_seconds;
-	distance_difference_traveled_y = distance_traveled_y * delta_seconds;
+	double wheel_base_m = (wheelbase_mm / 1000);
+
+	double friction_coefficient = 0;
+
+	//double left_encoder_counts_per_m = (left_encoder_counts_per_mm / 1000);
+	//double right_encoder_counts_per_m = (right_encoder_counts_per_mm / 1000);
+
+	double wheel_diam_m = (wheel_diam_mm / 1000);
+
+    double right_wheel_travel = (current_encoder_count_right - previous_encoder_count_right) * ((wheel_diam_m * M_PI) / ticks_per_rev);
+    double left_wheel_travel = (current_encoder_count_left - previous_encoder_count_left) * ((wheel_diam_m * M_PI) / ticks_per_rev);
+
+	
+	if( (left_wheel_travel - right_wheel_travel) == 0){
+		delta_x = 0;
+		delta_y = 0;
+		delta_theta = 0;
+		ROS_INFO("skip2");
+		return;
+	}
+
+	if((current_encoder_count_left - previous_encoder_count_left) ==
+		(current_encoder_count_right - previous_encoder_count_right)) {
+
+		delta_x = sin(theta) * right_wheel_travel;
+		delta_y = cos(theta) * right_wheel_travel;
+		delta_theta = 0;
+		ROS_INFO("skip3");
+		return;
+	}
+
+	double pivot_angl = ( ( right_wheel_travel - left_wheel_travel ) / wheel_base_m ) * (1 - friction_coefficient);
+
+	double pivot_center = ( ( wheel_base_m / 2 ) *  ( ( left_wheel_travel + right_wheel_travel ) / ( left_wheel_travel - right_wheel_travel ) ) ) * (1 + friction_coefficient);
+
+	double x_instantanous_center_of_curvature = x - ( pivot_center * sin(theta) );
+	double y_instantanous_center_of_curvature = y + ( pivot_center * cos(theta) );
+	
+	ROS_INFO("dt=%f, wd=%f, rwt=%f, lwt=%f, pecr=%d, pecl=%d, cecr=%d, cecl=%d, pa=%f, pc=%f, xicc=%f, yicc=%f", dt, wheel_diam_m, right_wheel_travel, left_wheel_travel, previous_encoder_count_right, previous_encoder_count_left, current_encoder_count_right, current_encoder_count_left, pivot_angl, pivot_center, x_instantanous_center_of_curvature, y_instantanous_center_of_curvature);
+
+	//rTp
+	double rTp[3][3];
+    rTp[0][0] = cos( pivot_angl * dt );
+    rTp[0][1] = -1 * sin( pivot_angl * dt );
+	rTp[0][2] = 0;
+    rTp[1][0] = sin( pivot_angl * dt );
+    rTp[1][1] = cos( pivot_angl * dt );
+	rTp[1][2] = 0;
+	rTp[2][0] = 0;
+	rTp[2][1] = 0;
+	rTp[2][2] = 1;
+
+	//pTicc
+	double pTicc[3][1];
+	pTicc[0][0] = x - ( x_instantanous_center_of_curvature );
+	pTicc[1][0] = y - ( y_instantanous_center_of_curvature );
+	pTicc[2][0] = theta;
+
+	//iccTn
+	double iccTn[3][1];
+	iccTn[0][0] = x_instantanous_center_of_curvature;
+	iccTn[1][0] = y_instantanous_center_of_curvature;
+	iccTn[2][0] = dt * pivot_angl;
+
+	//rTn = rtp * pticc + iccTn
+	double rTn[3][1];
+	rTn[0][0] = rTp[0][0] * pTicc[0][0] + rTp[0][1] * pTicc[0][0] + iccTn[0][0];
+	rTn[1][0] = rTp[1][0] * pTicc[1][0] + rTp[1][1] * pTicc[1][0] + iccTn[1][0];
+	rTn[2][0] = pTicc[2][0] + iccTn[2][0];
+
+    delta_x = (rTn[0][0] - x);
+    delta_y = (rTn[1][0] - y);
+	delta_theta = rTn[2][0] - theta;
 
 	previous_encoder_count_left = current_encoder_count_left;
 	previous_encoder_count_right = current_encoder_count_right;
+    //current_encoder_count_left = 0;
+    //current_encoder_count_right = 0;
+
+
+	ROS_DEBUG("\nrTn Matrix:\n[%g]\n[%g]\n[%g]\n", rTn[0][0], rTn[1][0], rTn[2][0]);
+
 
 }
 
@@ -275,6 +301,10 @@ int main(int argc, char** argv)
 	nh.getParam("encoderdirectionleft", encoder_direction_left);
 	nh.getParam("encoderdirectionright", encoder_direction_right);
 
+	nh.getParam("ticksperrev", ticks_per_rev);
+
+	nh.getParam("wheeldiammm", wheel_diam_mm);
+
 
 	// connect to the encoders
 	std::string topic_path = "phidgets/";
@@ -289,21 +319,35 @@ int main(int argc, char** argv)
 
 	// Setup nav and odom stuff
 	std::string base_link = "base_link";
-	nh.getParam("base_link", base_link);
+    //nh.getParam("base_link", base_link);
 	std::string frame_id = "odom";
-	nh.getParam("frame_id", frame_id);
+/*	nh.getParam("frame_id", frame_id);
 	nh.getParam("countspermmleft",
 			left_encoder_counts_per_mm);
 	nh.getParam("countspermmright",
 			right_encoder_counts_per_mm);
 
 	nh.getParam("wheelbase", wheelbase_mm);
+	
+	nh.getParam("frictioncoefficient", friction_coefficient);
 
 	// Get verbosity level
-	nh.getParam("verbose", verbose);
+    nh.getParam("verbose", verbose);*/
 
-	int frequency = 20;
-	nh.getParam("frequency", frequency);
+    wheelbase_mm = 305;
+    left_encoder_counts_per_mm = 0.1227;
+    right_encoder_counts_per_mm = 0.1227;
+    encoder_index_left = 0;
+    encoder_index_right = 2;
+    encoder_direction_right = 0;
+    encoder_direction_left = 1;
+    encoder_direction_right = -1;
+    ticks_per_rev = 3200;
+    wheel_diam_mm = 392.64;
+    friction_coefficient = 0.1;
+
+    int frequency = 10;
+    //nh.getParam("frequency", frequency);
 
 	geometry_msgs::TransformStamped odom_trans;
 	odom_trans.header.frame_id = frame_id;
@@ -323,10 +367,12 @@ int main(int argc, char** argv)
 		// Handle and update time
 		current_time = ros::Time::now();
 		//TODO remove test section below
-		double dt = (current_time - last_time).toSec();
-		//double delta_x = ( 0.4 * cos(theta) - 0.0 * sin(theta) ) * dt;
-		//double delta_y = ( .4 * sin(theta) + 0.0 * cos(theta) ) * dt;
-		//double delta_th = 0.4 * dt;
+		double dt = ((double)current_time.toSec() - (double)last_time.toSec());
+		// delta_x = ( 0.4 * cos(theta) - 0.0 * sin(theta) ) * dt;
+		// delta_y = ( .4 * sin(theta) + 0.0 * cos(theta) ) * dt;
+		// delta_th = 0.4 * dt;
+
+		//ROS_INFO("dT=%f", dt);
 
 		// reset the pose
 		bool reset = false;
@@ -340,8 +386,6 @@ int main(int argc, char** argv)
 			delta_y = 0;
 			delta_theta = 0;
 			n.setParam(reset_topic, false);
-			start_encoder_count_left = 0;
-			start_encoder_count_right = 0;
 		}
 
 		// update the velocity estimate based upon
@@ -350,10 +394,13 @@ int main(int argc, char** argv)
 
 		// compute odometry in a typical way given
 		// the velocities of the robot
-		x += distance_difference_traveled_x;
-		y += distance_difference_traveled_y;
-		theta += pivot_radius;
+		x += delta_x;
+		y += delta_y;
+        theta += delta_theta;
 
+
+		//ROS_INFO("dx=%f, dy=%f, dtheta=%f", delta_x, delta_y, delta_theta);
+		//ROS_INFO("x=%f, y=%f, theta=%f", x, y, theta);
 		// get Quaternion from rpy
 		geometry_msgs::Quaternion odom_quat =
 			tf::createQuaternionMsgFromYaw(theta);
@@ -382,12 +429,12 @@ int main(int argc, char** argv)
 
 		// set the velocity
 		odom.child_frame_id = base_link;
-		odom.twist.twist.linear.x = distance_difference_traveled_x / dt;
-		odom.twist.twist.linear.y = distance_difference_traveled_y / dt;
+		odom.twist.twist.linear.x = delta_x / dt;
+		odom.twist.twist.linear.y = delta_y / dt;
 		odom.twist.twist.linear.z = 0.0;
 		odom.twist.twist.angular.x = 0.0;	
 		odom.twist.twist.angular.y = 0.0;
-		odom.twist.twist.angular.z = pivot_radius / dt;
+		odom.twist.twist.angular.z = delta_theta / dt;
 
 		// publish odom
 		odom_pub.publish(odom);
