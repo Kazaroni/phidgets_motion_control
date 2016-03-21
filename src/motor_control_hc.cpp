@@ -308,6 +308,15 @@ void velocityCommandCallback(const geometry_msgs::Twist::ConstPtr& ptr)
             rotate = x;
             forward = y;
         }
+
+        if(invert_forward) {
+            forward = -forward;
+        }
+
+        if(invert_rotation) {
+            rotate = -rotate;
+        }
+
         float forward_speed = speed * forward;
 
         ros::Time current_time = ros::Time::now();

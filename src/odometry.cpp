@@ -339,9 +339,8 @@ int main(int argc, char** argv)
     right_encoder_counts_per_mm = 0.1227;
     encoder_index_left = 0;
     encoder_index_right = 2;
-    encoder_direction_right = 0;
-    encoder_direction_left = 1;
-    encoder_direction_right = -1;
+    encoder_direction_left = -1;
+    encoder_direction_right = 1;
     ticks_per_rev = 3200;
     wheel_diam_mm = 392.64;
     friction_coefficient = 0.1;
@@ -396,7 +395,7 @@ int main(int argc, char** argv)
 		// the velocities of the robot
 		x += delta_x;
 		y += delta_y;
-        theta += delta_theta;
+        theta += -delta_theta;
 
 
 		//ROS_INFO("dx=%f, dy=%f, dtheta=%f", delta_x, delta_y, delta_theta);
